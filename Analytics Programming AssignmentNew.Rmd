@@ -1,0 +1,690 @@
+---
+title: "Analytics Programming Assignment"
+author: "Manan Bhatia"
+date: "2023-05-16"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+• We hold a copy of this assignment that we can produce if the original is lost or damaged.
+
+• We hereby certify that no part of this assignment/product has been copied from any other student’s work or from any other source except where due acknowledgement is made in the assignment.
+
+• No part of this assignment/product has been written/produced for us by another person except where such collaboration has been authorised by the subject lecturer/tutor concerned.
+
+• We are aware that this work may be reproduced and submitted to plagiarism detection software programs for the purpose of detecting possible plagiarism (which may retain a copy on its database for future plagiarism checking).
+
+• We hereby certify that we have read and understand what the School of Computing, Engineering and Mathematics defines as minor and substantial breaches of misconduct as outlined in the learning guide for this unit
+
+
+
+```{r}
+product = read.csv("product_hierarchy.csv")
+sale = read.csv("sales_ug.csv")
+store = read.csv("store_cities.csv")
+```
+Comment: Before starting the first question, I first defined the 3 data set csv files given with product, sale and store.
+
+```{r}
+library(tidyverse)
+library(conflicted)
+library(dplyr)
+```
+
+# 1. Write the code to compute the total revenue of each store at the end of each day. Is there a noted difference between the days? Write also the code to calculate the total revenue over the seven day period. Plot the latter on a graph.
+
+Viewing the overall information about the dataset sale (daily sales record of data over a seven day period)
+
+```{r}
+#viewing the dataset
+head(sale, 10) #head(..., 10) shows the first 10 rows of dataset a
+
+#structure of the dataset
+str(sale) #show the type of data of the variables
+```
+
+<br>
+
+### Total revenue of each store at the end of each day
+
+To calculate the revenue of each store at the end of each day, using `aggregate()` is the best choice of algorithm, as it can split data into subsets and compute summary statistics for each.
+
+The function below summarise the statistic of revenue based on the store_id and date variables. In this case, it sums the total revenue made based on the store_id and date.
+
+```{r}
+revenue_each_day <- aggregate(revenue ~ store_id + date, #calculate revenue based on 
+                              #store_id and date variables
+                              data = sale, 
+                              FUN = sum) #summation is abbreviated to sum
+head(revenue_each_day, 10) 
+```
+
+The above table demonstrates the total revenue of each store profited by the end of each day, starting from date 3 June to 9 June of 2017.
+
+The stores are shown by `store_id` while the `date` shows the days for which the `revenue` is shown. For example:
+
+-   Store with unique identifier number of `r revenue_each_day$store_id[1]` obtained a total revenue of `r revenue_each_day$revenue[1]` on the date `r revenue_each_day$date[1]`.
+-   Store with unique identifier number of `r revenue_each_day$store_id[2]` obtained a total revenue of `r revenue_each_day$revenue[2]` on the date `r revenue_each_day$date[2]`.
+-   Store with unique identifier number of `r revenue_each_day$store_id[100]` obtained a total revenue of `r revenue_each_day$revenue[100]` on the date `r revenue_each_day$date[100]`. And so on.
+
+<br>
+
+### Differences in revenues between the day?
+
+To see the difference in revenues between the day, we can use `tapply()` to provide mathematical function to columns that use the function. In this example, `diff` is a function value that is used to calculated the differences in revenues obtained between each row where `store_id` is matched with the previous row.
+
+```{r}
+tapply(revenue_each_day$revenue, 
+       revenue_each_day$store_id, 
+       diff) %>% #each array element represents the difference in revenue between 
+  head(10)       #the current day and the next day
+```
+
+The table above shows the differences in revenues of each store between the day. For example:
+
+-   Store with `store_id` S0001 has 6 returned values:
+
+    -   The first value means the difference in revenues between day 1 and day 2 is \$528.37, implying that day 2 total revenue obtained is about \$528.37 more than day 1.
+
+    -   The second value means the difference in revenues between day 2 and day 3 is \$-290.51, meaning that day 3 total revenue obtained is about 290.51 less than day 2.
+
+<br>
+
+In this example, `tapply()` returns values in the form of arrays. It is a poor way to arrange data, however this is the only current available option for my personal choice of algorithm.
+
+```{r}
+class(tapply(revenue_each_day$revenue, revenue_each_day$store_id, diff))
+#returns values in the form of arrays.
+```
+
+<br>
+
+### Total revenue generated from each store over seven days
+
+We will use `aggregate()` function to calculate the total revenue obtained in corresponds with each store's `store_id`.
+
+```{r}
+#summarise the total revenue made from each store_id over the seven days
+seven <- aggregate(revenue ~ store_id, 
+                           data = sale, 
+                           FUN = sum) #use sum to calculate the total revenue
+head(seven, 10)
+```
+
+The above table portrays the first 10 values of the total revenue of each store over the seven day period. For example:
+
+-   Store with `store_id` (unique identifier number) of `r seven$store_id[1]` has gained a total revenue of `r seven$revenue[1]`.
+
+-   Store with `store_id` of `r seven$store_id[2]` has gained a total revenue of `r seven$revenue[2]`.
+
+-   Store with `store_id` of `r seven$store_id[50]` has gained a total revenue of `r seven$revenue[50]`.
+
+And so on
+
+<br>
+
+### Plotting:
+
+We could use `ggplotly` to interact with graph in other form of document (html) but not in any word or pdf document. However, we still include it to see the overall plotting of points of revenue by each store.
+
+
+```{r}
+#plotting the total revenue over the seven day period
+ggplot(seven, aes(store_id, revenue)) +
+  geom_point() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  coord_cartesian(xlim = c(1, 30)) + #showing the revenues obtained by the first 30 stores 
+  labs(title = "Total revenue obtained over seven days by each store",
+       caption = "The plot shows only the first 30 stores' revenues due to overloading of data.
+       Note: revenue - daily total sales revenue
+             store_id - unique identifier of a store")
+```
+
+<br>
+
+Most of the time, we see that most stores' revenue accumulate below the mark of \$3000. However, some stores are distinct, where revenues obtained could go higher than the mark of \$3000 and potentially could reach the mark of \$9000 in total revenue. For instance, in the total revenue table above (section 1 - part 3), the store with store_id of S0001 has gained a total of \$8224.19 in term of total revenue over the past seven days.
+
+\newpage
+
+<hr/>
+
+# 2. What’s the most popular product type (hierarchy 1) sold in all stores over a week? How much revenue did the stores receive for that product during the week? How does that compare with the second most popular product? Provide a table that shows the product type ranked from most to least popular. For each product type provide: how many subtypes (hierarchy 2) are there, how many products are in this product type, what’s the sales quantity, and the revenue generated.
+
+Viewing information about the dataset product (product_hierarchy data)
+
+```{r}
+#viewing the dataset
+head(product, 10) #shows the first 10 variables of dataset b
+
+#structure of the dataset
+str(product) #shows the structure of b and its datax
+```
+
+<br>
+
+### The most popular product type (hierarchy 1) sold in all stores over a week
+
+**Joining two datasets a and b based on their corresponding variables**
+
+In this case the corresponding key is product_id, and the joining variables are hierarchy1_id and hierarchy2_id.
+
+```{r}
+merged_sale_product_tab <- product %>% 
+  select("product_id", "hierarchy1_id", "hierarchy2_id") %>%
+  right_join(sale)
+```
+
+<br>
+
+To check for the popularity ranking of the product type (hierarchy 1) in terms of selling, we use `sort()` to sort table values. By using `decreasing = TRUE` as additional argument, it sorts table values from the highest to the lowest.
+
+```{r}
+sort(table(merged_sale_product_tab$hierarchy1_id), decreasing = TRUE)
+```
+
+As it can be seen in the above table, the most sold product type in all stores is `H03` with over 52395 items sold over the week. And the second most popular product type sold is `H01` with 29748 items sold over the week.
+
+<br>
+
+### How much revenue did the stores receive for that product during the week?
+
+To calculate Revenue received from that product during the week, again, we will use `aggregate()` to summarise the summation statistic of revenue based on the `store_id` and `date`.
+
+```{r}
+#revenue made
+stores_rev_made1 <- 
+  merged_sale_product_tab[which(merged_sale_product_tab$hierarchy1_id == "H00"),] #select rows
+#where hiearchy1_id is "H00"
+
+aggregate(revenue ~ store_id + date, 
+          data = stores_rev_made1, 
+          sum) %>%
+  head(10)#shows the first 10 values of revenues made from products with hierarchy1_id of "H00"
+```
+
+As shown in the table above, Each store has received a various amount of revenue on each day. For instance, Store with the `store_id` of S0001 has made a total of \$315.09 on the date of 3/7/2017. While store with the `store_id` of S0006 has only made a total of \$17.91 on the date of 3/7/2017 on the same product as the store with `store_id` of S0001. Therefore, the revenues generated by each store are unique.
+
+<br>
+
+### How does that compare with the second most popular product?
+
+The second most popular product is "H01" according to the sorted table above in task 2, question 1. In the below table, it shows the revenues obtained on each day in each store, by selling the second most popular product "H01".
+
+```{r}
+stores_rev_made2 <- merged_sale_product_tab[which(merged_sale_product_tab$hierarchy1_id == "H01"),] #select
+#rows where hierarchy1_id is "H01"
+
+#total revenue made in each store from the products with hierarchy1_id "H01" 
+aggregate(revenue ~ store_id + date, 
+          data = stores_rev_made2, 
+          sum) %>%
+  head(10) 
+```
+
+In some store, they gained no revenue on this product type, for example:
+
+-   S0003 made zero revenue on 3/7/2017.
+
+-   S0006 made zero revenue on 3/7/2017, and so on.
+
+<br>
+
+**Comparison**
+
+*Assess the number of rows of each aggregated dataset*
+
+```{r}
+stores_rev_made1 <- aggregate(revenue ~ store_id + date, data = stores_rev_made1, sum)
+stores_rev_made2 <- aggregate(revenue ~ store_id + date, data = stores_rev_made2, sum)
+```
+
+<br>
+
+We notice that number of rows of each assigned data frame is different due to the lack of recording of information on the date.
+
+```{r}
+nrow(stores_rev_made1) #showing the row numbers of stores_rev_made1
+nrow(stores_rev_made2) #showing the row numbers of stores_rev_made2
+```
+
+<br>
+
+*Merging dataset:*
+
+Since the number of rows is different for each set of data, when doing a merging process, we use `full_join` on `store_id` and `date` to have a complete set of data from both sides. Even though there will be NULL variables in some case, but we can set it as 0 since there is no record available. However, we cannot remove NULL variables because there might be records from the other dataset,
+
+```{r}
+store_rev_made_12binded <- stores_rev_made1 %>% #joins stores_rev_made1 to stores_rev_made2 
+  full_join(stores_rev_made2, 
+            by = c("store_id", "date")) # by "store_id" and "date"
+
+#fix column names
+colnames(store_rev_made_12binded) <-
+  c("store_id", "date", "H00.revenue", "H01.revenue")
+
+#assign 0 to NA values
+store_rev_made_12binded[is.na(store_rev_made_12binded)] <- 0
+
+#shows final result
+head(store_rev_made_12binded, 10)
+```
+
+<br>
+
+```{r}
+store_rev_made_12binded <- aggregate(cbind(store_rev_made_12binded$H00.revenue,
+                                           store_rev_made_12binded$H01.revenue),
+                                     by = list(store_rev_made_12binded$store_id),
+                                     FUN = sum)
+
+#changes colnames
+colnames(store_rev_made_12binded) <- c("store_id","H00.revenue","H01.revenue")
+
+#assign a new column with differences in revenues to store_rev_made_12binded
+store_rev_made_12binded[,"revenue.differences"] <- 
+  store_rev_made_12binded$H00.revenue - store_rev_made_12binded$H01.revenue
+
+#shows final result
+head(store_rev_made_12binded, 10)
+```
+
+<br>
+
+**Plotting the revenue differences:**
+
+```{r}
+plot(store_rev_made_12binded$revenue.differences)
+```
+
+<br>
+
+### 4) Provide a table showing the product type ranked from most to least popular
+
+Again, we use sort to sort out the ranking of product types based on the number of product they have.
+
+```{r}
+sort(table(merged_sale_product_tab$hierarchy1_id), decreasing = TRUE)
+```
+
+The table above shows the ranking of product type from most to least, where the most and least popular product types are H00 and H01.
+
+<br>
+
+### 5) For each product: how many subtypes products are there?
+
+To see how many subtypes products are available and the amount of products in these subtype products, we use `table` to tabulate the occurrence frequency of a data in a variable. In this case, we want to see how often the number of hierarchy2_id occurs, in order to calculate the amount of available products in that subcategory.
+
+```{r}
+matx_1 <- table(product$hierarchy1_id, product$hierarchy2_id)
+matx_1
+```
+
+As described in the description of variables, each product has subtype products corresponded to and is categorised into levels of hierarchy. According to the hierarchy table shown above:
+
+-   There are 5 subtype products of H00: H0000, H0001, H0002, H0003, H0004.
+
+-   There are 4 subtype products of H01: H0105, H0106, H0107, H0108.
+
+-   There are 2 subtype products of H02: H0209, H0311.
+
+-   There are 7 subtype products of H03: H0311, H0312, H0313, H0314, H0315, H0316, H0317.
+
+<br>
+
+### 6) How many products are in this product type?
+
+As shown in the matrix table `matx_1` above:
+
+-   There are `r matx_1[1,1]` items in `r colnames(matx_1)[1]` (subset of `r rownames(matx_1)[1]`).
+
+-   There are `r matx_1[1,2]` items in `r colnames(matx_1)[2]` (subset of `r rownames(matx_1)[1]`).
+
+-   And so on.
+
+<br>
+
+### 7) Sales quantity:
+
+We use `aggregate()` to calculate the summation of `sales` quantity in correspondence with `hierarchy1_id` subset.
+
+```{r}
+#hierarchy1_id:
+aggregate(sales ~ hierarchy1_id, data = merged_sale_product_tab, sum)
+```
+
+There are four product types, and each made a unique quantity of sales over the seven days:
+
+-   H00 has made a total sale of `r aggregate(sales ~ hierarchy1_id, data = merged_sale_product_tab, sum)[1,2]`.
+
+-   H01 has made a total sale of `r aggregate(sales ~ hierarchy1_id, data = merged_sale_product_tab, sum)[2,2]`.
+
+-   H02 has made a total sale of `r aggregate(sales ~ hierarchy1_id, data = merged_sale_product_tab, sum)[3,2]`.
+
+-   H03 has made a total sale of `r aggregate(sales ~ hierarchy1_id, data = merged_sale_product_tab, sum)[4,2]`.
+
+<br>
+
+The table below shows the summmation of sales quantity that corresponds to `hierarchy1_id` and `hierarchy2_id`subsets
+
+```{r}
+#hierarchy2_id:
+sale_hier2 <- aggregate(sales ~ hierarchy1_id + hierarchy2_id, 
+                        data = merged_sale_product_tab,
+                        sum) %>%
+              head(10)
+sale_hier2
+```
+
+Total sale made based on the second level of hierarchy (hierarchy2_id). For instance:
+
+-   In a week, the total sale produced by selling products where the first level of hierarchy is H00 and the second level of hierarchy is H0000, was 13093.000.
+
+-   Meanwhile, the total sale produced by selling products where the first hierarchy level is H00 and the second hierarchy level is H0001, was 2481.000.
+
+**Insight:**
+
+Re-ordering dataframe `sale_hier2` to see which the maximum sales of each type of product, going from the highest sales to lowest sales of each type.
+
+```{r}
+sale_hier2[order(sale_hier2$hierarchy1_id, - sale_hier2$sales),]
+```
+
+The most popular subtype of H00 sold in all stores is H0003 with a total sale of 17,920 made over the seven days. And the second most popular subtype of H00 sold in all stores is H0000 with a total sale of 13,093 made over the seven days.
+
+<br>
+
+### 8) Revenue generated from each product type:
+
+As same as for calculating sales quantity, we use `aggregate()` with `sum` as a function to calculate the revenue generated from each product type.
+
+```{r}
+#hierarchy1_id
+aggregate(revenue ~ hierarchy1_id, 
+          data = merged_sale_product_tab,
+          sum)
+```
+
+The total revenue obtained by each product type over the seven day period shows that:
+
+-   The top ranked product type is H00,which has obtained a total revenue of \$100,165.44 over seven days.
+
+-   Meanwhile, the second-ranked product type is H01,which has obtained a total revenue of \$61,773.15.
+
+-   And, the last ranked product type is H02,which has obtained a total revenue of \$12,221.22.
+
+<br>
+
+```{r}
+#hierarchy2_id:
+aggregate(revenue ~ hierarchy1_id + hierarchy2_id, 
+          data = merged_sale_product_tab,
+          sum) %>%
+  head(10)
+```
+
+Total revenue made based on the second level of hierarchy (hierarchy2_id).
+
+-   The most sold item in H00 is H0000 with a total of \$35,413.54 made over the week.
+-   And the least sold item in H00 is H0001, with a total of \$9,207.45 made over the week.
+
+\newpage
+
+<hr/>
+
+
+# 3. Compare the sales volumes between the two most common store types in the data set. How do they compare in terms of total revenue? Is there a relationship between a store’s size and its revenue?
+
+View information about the dataset store (store_cities data)
+
+```{r}
+#Viewing the first 10 values of the dataset
+head(store, 10)
+```
+
+<br>
+
+```{r}
+#structure of the dataset
+str(store)
+```
+
+<br>
+
+### Compare the Sales volumes between the two most common store types in the data set.
+
+Sorting store types accross the stores cities data set:
+
+```{r}
+sort(table(store$storetype_id), decreasing = TRUE)
+```
+
+Ranking from most to least, there are:
+
+-   ST04 is the most common storetype with over 83 stores accross cities.
+
+-   ST02 and ST01 are the least common storetypes accross cities, with only 4 stores for each.
+
+<br>
+
+Joining two datasets a and d together
+
+```{r}
+#right join dataset d and a according to the corresponding id key:
+merged_store_sale_tab <- store %>% 
+  select("store_id", "storetype_id", "store_size") %>%
+  right_join(sale)
+head(merged_store_sale_tab, 10)
+```
+
+Calculating Sales volume using `aggregate()` with `sum` as an additional function.
+
+```{r}
+#sales volume of ST03 and ST04
+sale_ST <- aggregate(sales ~ storetype_id, 
+                     data = merged_store_sale_tab,
+                     sum)[c(3,4),] #[c(3,4),] is to display only the values of sales                                     #from ST03 and ST04.
+sale_ST
+```
+
+In terms of sales, Stores with `Storetype_id` ST03 has gained a total of 7980 in sale volume while stores with the store_id ST04 has gained a total of 35,556 in sale volume over the seven days. This means that stores with the storetype_id ST04 is more potential than the other, since the difference in the volume of sale made over a week is at least `r sale_ST[2,2] / sale_ST[1,2]` times approximately over the other.
+
+<br>
+
+### How do they compare in terms of total revenue?
+
+```{r}
+#Total revenue of ST03 and ST04
+rev_ST <- aggregate(revenue ~ storetype_id, 
+          data = merged_store_sale_tab,
+          sum)[c(3,4),] #shows only the values of revenue from ST03 and ST04
+rev_ST
+```
+
+In terms of revenue achieved over the seven days period, Stores with `Storetype_id` as ST03 has gained a total of \$21,776 while stores with `storetype_id` ST04 gained a total of \$144,628. This means stores that is ST04 has made a total revenue that is at least `r rev_ST[2,2] / rev_ST[1,2]` times approximately over the ST03 stores' total revenue.
+
+<br>
+
+### Is there a relationship betwen a store's size and its revenue?
+
+We will perform a hypothesis test on correlation to see if there is a relationship between a store's size and its revenue. Let the hypothesis be:
+
+-   H0: p = 0
+
+-   Ha: p != 0
+
+```{r}
+rev_rel <- aggregate(revenue ~ store_id + store_size, data = merged_store_sale_tab, sum)
+nrow(rev_rel) #nrow of observations
+cor.test(rev_rel$store_size,rev_rel$revenue) #perform pearson correlation testing
+```
+
+As stated in the correlation test above, since:
+
+-   There seems to be a moderate positive correlation between `store_size` and `revenue` as the correlation coefficient `cor` is 0.701293.
+
+-   95% CI between 0.60 to 0.77 for correlation coefficient.
+
+-   the number of observations is large enough, with `r nrow(rev_rel)` rows.
+
+-   p-value is smaller than 0.05(default significance level).
+
+We reject the null hypothesis. In conclusion, there is sufficient evidence to conclude that there is a significant linear relationship between `store_size` and `revenue`.
+
+<br>
+
+Lets see would a linear regression line be able to fit in the graph.
+
+Hypothesi:
+
+-   H0: B = 0. There is no sufficient evidence of a linear relationship between `store_size` and `revenue`.
+
+-   Ha: B != 0. There is sufficient evidence of a linear relationship between `store_size` and `revenue`.
+
+```{r}
+summary(lm(revenue~store_size, data = rev_rel))
+```
+
+As described by the table, the explantory variable,`store_size` seems to have a statistically significant positive relationship with the response variable `revenue`, because:
+
+-   p-value of `store_size` is smaller than 0.05
+
+-   Standard error is small.
+
+Overall,the linear regression model fits slightly well with the data, since:
+
+-   R-squared refers to the 48% of the variance in the response variale `revenue`, is explained y the model, promoting moderate linear relationship.
+
+-   p-value is less than 0.05.
+
+-   Slope of the parameter is not equal to 0.
+
+-   RSE (residual standard error) is high, which explains why the scatterplot (in the next part) spread like a big fan-shaped.
+
+Therefore, we reject the null hypothesis and conclude that there is a linear relationship between `store_size` and `revenue`.
+
+<br>
+
+Visualisation of the linear regression model on the graph of `store_size` and `revenue`.
+
+```{r}
+ggplot(data = rev_rel, aes(x = store_size, y = revenue)) +
+  labs(title = "Relationship between store_size and revenue") + 
+  geom_point() +
+  geom_smooth(method = "lm", 
+              se = FALSE) # se = FALSE removes the confidence interval lines
+```
+
+\newpage
+
+<hr/>
+
+# 4. Several different types of promotions were applied to the products during the period with various level of promotion rates. For each promotion type, display the different levels of promotion used during the period. Analyse the effectiveness of the promotion on the sales of the products.
+
+### For each promotion type, display the different levels of promotion during the period
+
+We will check promotion rate (promo_bin_1) by using `table()` function
+
+```{r}
+#Different levels of promotion
+table(sale$promo_type_1, sale$promo_bin_1)
+```
+
+Each promotion type has a unique level of ranking rate, from very high to very low. Except for promotion type PR14, it has a single promotion rate and is not categorised to any rate level like other promotion types.
+
+<br>
+
+To assess the effectiveness of using promotion, we will check on how many promotion used per day in stores across cities. The table below shows the amount and type of promotions that was used over seven days.
+
+```{r}
+#Uses of promotion accross the seven day period
+table(sale$date, sale$promo_type_1)
+```
+
+However, as it can be seen, the most commonly used promotion across the seven days was PR14, with more over 13400 promotions were used on each day in every stores across cities.
+
+<br>
+
+If we dwell deeper into how many subtypes products are sold per day, we will have:
+
+-   These are the total products, subtype products sold from all stores on each day, from day 1 to day 7.
+
+```{r}
+#shows products, their subtype products, and how many sold per day over 7 days.
+table(sale$promo_type_1, sale$promo_bin_1, sale$date) %>%
+  head(2) #shows 2 days instead of 7 days to minimise the display of data.
+```
+
+<br>
+
+### Analyse the effectiveness of the promotion on the sales of the products
+
+To analyse the effectiveness of the promotion on the sales of products, We will use aggregate to see how much sales were made on each type of promotion, along with the revenue obtained, over the seven-day period. In the example below, I use `cbind` to bind columns sales and revenue from the dataset `a`, then I use `list` (as required to group dataframe by column variables) to aggregate `sales` and`revenue` by `promo_type_1` and `date`, with function `sum`.
+
+```{r}
+x1 <- aggregate(cbind(sale$sales, sale$revenue),
+                by = list(sale$promo_type_1, sale$date), #aggregated by these variables
+                sum) #returns sales and revenue
+colnames(x1) <- c("promo_type_1", "date", "sales", "revenue")
+head(x1[order(x1$sales, decreasing = TRUE),], 10)
+```
+
+As we can see from the ordered dataframe `x1`, we notice that the type of promotion have a significant effect on the sales of items within stores. For examples:
+
+-   The promotion type PR14 achieved the most sales among others (sales = 25845), and which also produced the highest revenues.
+
+-   While the promotion type PR06 only achieved the most sales of 3, which also produced the lowest revenues among others.
+
+<br>
+
+However, the ability to obtain sufficient amount of sales also varies depending on the date which the promotions were being promoted, meaning the shops might get a different amount of sales everyday in the seven days. To visualise the table of sales of each promotion type we will plot the sales trends of each type of promotion over seven day period, by using `ggplot`.
+
+```{r}
+pl1 <- ggplot(data = x1,
+              aes(x = date, y = sales, color = promo_type_1)) +
+       geom_point() +
+       geom_line(group = x1$promo_type_1) +
+       coord_trans() 
+pl1 +
+  labs(title = "Sales trends over seven days on the types of promotion",
+       caption = "*Note: scaling is not efficient, so subgraphs of sales trends
+                will be provided to reinforce the visualisation on trends data")
+```
+
+<br>
+
+**Subgraphs of pl1**
+
+```{r}
+pl1 + 
+  coord_cartesian(ylim = c(5000,8000)) +
+  labs(title = "Sales trend of PR14 over 7 days")
+```
+
+<br>
+
+<br>
+
+As mentioned earlier, the sales trend would vary depending on the date that the items with sales promotions were sold. In the Sales trend of PR14 above, the highest sales achieved was on the date 7/8/2017 and the lowest sales during the seven days was on 6/7/2017.
+
+-   The path that the sales trend followed is parabolic, it shows that most sales occurred on the weekend and lowest in midweek. Furthermore, the variation in sales between each day is significant.
+
+<br>
+
+```{r}
+pl1 +
+  coord_cartesian(ylim = c(0,600)) +
+  labs(title = "Sales trends of other promotion types over 7 days")
+```
+
+<br>
+
+<br>
+
+From the sales trends above, it could be noticed that some of these sales trends followed the linear trend throughout the whole week. For example, `PR03`,`PR08`,`PR06`. These promotion types did not vary much in terms of sales across the seven days. Moreover, Promotions such as `PR08` and `PR13` did not even achieve any sales since day 1 (3/7/2017) until day 6 (8/7/2017). Uniquely, promotion types like `PR05` and `PR12` followed the parabolic trend as `PR14`, despite there are not much variations within their sales quantity.
+
+However, from the analysis above, we can assure that the uses of promotions can affect the sales of products. Especially, with products that were promoted with promotion type `PR14`, where the number of slaes throughout the week was higher than sales with other promo types.
+
+<br>
